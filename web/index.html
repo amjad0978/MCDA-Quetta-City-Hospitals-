@@ -4,6 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#05070d">
+  <script>
+    if (window.matchMedia("(max-width: 768px)").matches) {
+      document.documentElement.classList.add("mobile-screen");
+    }
+  </script>
   <title>Quetta | Hospital Site Suitability</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -79,6 +84,7 @@
     }
     .sidebar-toggle:hover { background: var(--blue); box-shadow: 0 0 14px #1e88ff55; }
     body.sidebar-collapsed .sidebar-toggle { left: 14px; }
+    .sidebar-close, .mobile-controls-open { display: none; }
     .status-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 1px 2px 10px; }
     .status-pill { max-width: 77%; padding: 5px 8px; overflow: hidden; border: 1px solid #24558d; border-radius: 99px; color: #a9d5ff; background: #0b1c34; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
     .status-pill.warn { border-color: #705626; color: #e5c986; background: #201a10; }
@@ -173,6 +179,7 @@
     .road-core:hover { filter: drop-shadow(0 0 10px var(--road-color)); }
     .road-blink { animation: pulse var(--road-duration, 1.4s) ease-in-out infinite; animation-delay: var(--road-delay, 0s); }
     .road-flow { stroke-dasharray: 12 18; animation: roadFlow var(--road-duration, 1.4s) linear infinite; }
+    .road-flow-mobile { stroke-dasharray: 8 28; animation-duration: 3s !important; }
     .road-travel { stroke-dasharray: 1 28; stroke-linecap: round; animation: roadFlow var(--road-duration, 1.4s) linear infinite; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes pulse { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
@@ -182,17 +189,48 @@
     .message { margin: 0 0 8px; padding: 7px; border: 1px solid #705626; border-radius: 8px; color: #d9c18c; background: #1a170f; font-size: 8px; line-height: 1.45; }
     .message.error { border-color: #8b323b; color: #ffb6bc; background: #260c12; }
     .empty-note { padding: 8px; border: 1px dashed #29404b; border-radius: 6px; color: #98afc2; font-size: 9px; line-height: 1.5; }
-    @media (max-width: 760px) {
-      .sidebar { inset: auto 8px 8px; width: auto; min-width: 0; max-width: none; max-height: 62vh; padding: 10px; border-radius: 10px; }
-      .topbar { top: 8px; left: 8px; right: 8px; min-height: 48px; padding: 7px 9px; }
-      .leaflet-top.leaflet-left { top: 58px; left: 8px; }
-      .leaflet-top.leaflet-right { top: 58px; }
-      .header-actions .optional-action { display: none; }
+    @media (max-width: 768px) {
+      .sidebar {
+        z-index: 900; inset: 0 auto 0 0; width: min(85vw, 320px); min-width: 0;
+        max-width: 320px; height: 100vh; height: 100dvh; max-height: none;
+        padding: 48px 10px 10px; border-radius: 0 10px 10px 0;
+        transform: translateX(-105%); visibility: hidden; pointer-events: none;
+        animation: none; transition: transform .24s ease, visibility .24s ease;
+      }
+      html.mobile-panel-open .sidebar {
+        transform: translateX(0); visibility: visible; pointer-events: auto;
+      }
+      .sidebar-close {
+        position: absolute; top: 9px; right: 10px; display: grid; width: 32px;
+        height: 32px; place-items: center; padding: 0; border: 1px solid #2778d6;
+        border-radius: 50%; color: #fff; background: #102547; font-size: 18px;
+        line-height: 1; transition: background .18s ease, box-shadow .18s ease;
+      }
+      .sidebar-close:hover { background: var(--blue); box-shadow: 0 0 12px #1e88ff55; }
+      .sidebar-toggle { display: none; }
+      .mobile-controls-open {
+        position: fixed; z-index: 850; bottom: 16px; left: 16px; display: grid;
+        width: 48px; height: 48px; place-items: center; padding: 0;
+        border: 1px solid #63b2ff; border-radius: 50%; color: #fff;
+        background: #1e88ff; box-shadow: 0 4px 16px #0009, 0 0 16px #1e88ff55;
+        transition: transform .18s ease, box-shadow .18s ease;
+      }
+      .mobile-controls-open:hover { transform: translateY(-2px); box-shadow: 0 0 20px #1e88ff88; }
+      html.mobile-panel-open .mobile-controls-open { display: none; }
+      .topbar {
+        top: 8px; left: 8px; right: 8px; min-height: 48px; padding: 7px 9px;
+        flex-wrap: wrap; justify-content: center; gap: 5px;
+      }
+      .title-copy { flex: 1 1 100%; }
+      .header-actions { width: 100%; flex: 1 1 100%; justify-content: center; flex-wrap: wrap; gap: 5px; }
+      .header-actions .header-btn, .header-actions .primary-btn {
+        min-width: 0; min-height: 27px; flex: 1 1 auto; padding: 0 5px;
+        font-size: clamp(7px, 2.1vw, 8px); white-space: nowrap;
+      }
+      .leaflet-top.leaflet-left { top: 92px; left: 8px; }
+      .leaflet-top.leaflet-right { top: 92px; }
       h1 { max-width: 59vw; font-size: 12px; letter-spacing: .7px; }
       .title-kicker { font-size: 7px; letter-spacing: 1.3px; }
-      .sidebar-toggle { top: auto; left: auto; right: 15px; bottom: calc(62vh + 17px); display: block; width: auto; min-height: 32px; padding: 0 10px; font-size: 8px; }
-      body.sidebar-collapsed .sidebar-toggle { left: auto; right: 15px; bottom: 14px; }
-      .sidebar.collapsed { max-height: 0; padding: 0; overflow: hidden; border-width: 0; transform: none; }
       .section { padding: 9px; }
     }
   </style>
@@ -213,6 +251,7 @@
     </div>
   </header>
   <aside id="sidebar" class="sidebar">
+    <button id="sidebar-close" class="sidebar-close" type="button" aria-label="Close controls">×</button>
     <div class="status-row">
       <span id="data-status" class="status-pill">Loading local layers…</span>
       <span id="cell-count" class="hint"></span>
@@ -259,8 +298,8 @@
     <section class="section">
       <div class="section-head"><h2>Road network</h2><span id="road-count" class="hint">0 roads</span></div>
       <div id="road-mode" class="segmented" aria-label="Road animation mode">
-        <button type="button" data-road-mode="blink" class="active">Blink</button>
-        <button type="button" data-road-mode="flow">Flow</button>
+        <button type="button" data-road-mode="blink">Blink</button>
+        <button type="button" data-road-mode="flow" class="active">Flow</button>
         <button type="button" data-road-mode="pulse">Pulse</button>
         <button type="button" data-road-mode="static">Static</button>
       </div>
@@ -320,6 +359,12 @@
   </aside>
   <button id="sidebar-toggle" class="primary-btn sidebar-toggle" type="button"
     aria-controls="sidebar" aria-expanded="true" aria-label="Collapse sidebar" title="Collapse sidebar">‹</button>
+  <button id="mobile-controls-open" class="mobile-controls-open" type="button"
+    aria-controls="sidebar" aria-expanded="false" aria-label="Open controls" title="Open controls">
+    <svg aria-hidden="true" width="23" height="23" viewBox="0 0 24 24" fill="none">
+      <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+  </button>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
@@ -354,7 +399,7 @@
         metadata: null, criteria: CRITERIA, active: [], grid: null, gridLayer: null,
         hospitals: null, roads: null, boundary: null, city: null, roadRecords: [], sites: [],
         method: "WLC", weightMode: "manual", weights: {}, manual: {}, opacity: .55,
-        roadMode: "blink", roadSpeed: 1, roadGlow: 6, ahpApplied: false,
+        roadMode: "flow", roadSpeed: 1, roadGlow: 6, ahpApplied: false,
         matrix: CRITERIA.map((_, i) => CRITERIA.map((__, j) => i === j ? 1 : 1)),
         areaChart: null, weightsChart: null, sensitivityChart: null,
         wlcRank: [], topsisRank: [], classAreas: [], criterionLayer: null,
@@ -363,6 +408,8 @@
       };
       const map = L.map("map", { zoomControl: true, preferCanvas: false, minZoom: 11, maxZoom: 18 })
         .setView([30.1414, 67.0774], 11);
+      const mobileSidebarQuery = window.matchMedia("(max-width: 768px)");
+      let mobileViewport = mobileSidebarQuery.matches;
       const tileSettings = { maxZoom: 18, attribution: "&copy; OpenStreetMap contributors" };
       const cartoLayer = L.tileLayer(
           "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",
@@ -399,13 +446,22 @@
       function updateSidebarToggleLabel() {
         const toggle = $("sidebar-toggle");
         const collapsed = $("sidebar").classList.contains("collapsed");
-        const mobile = window.matchMedia("(max-width: 760px)").matches;
-        toggle.textContent = mobile
-          ? collapsed ? "Show controls" : "Hide controls"
-          : collapsed ? "›" : "‹";
+        toggle.textContent = collapsed ? "›" : "‹";
         toggle.setAttribute("aria-expanded", String(!collapsed));
         toggle.setAttribute("aria-label", collapsed ? "Expand sidebar" : "Collapse sidebar");
         toggle.title = collapsed ? "Expand sidebar" : "Collapse sidebar";
+      }
+
+      function setMobileSidebarOpen(open) {
+        if (!mobileSidebarQuery.matches) return;
+        document.documentElement.classList.toggle("mobile-panel-open", open);
+        $("mobile-controls-open").setAttribute("aria-expanded", String(open));
+        map.invalidateSize({ pan: false });
+        clearTimeout(state.mapLayoutTimer);
+        state.mapLayoutTimer = setTimeout(() => {
+          map.invalidateSize({ pan: false });
+          fitCityToVisibleMap();
+        }, 260);
       }
 
       function fitCityToVisibleMap() {
@@ -414,15 +470,12 @@
         if (!bounds.isValid()) return;
 
         const sidebar = $("sidebar");
-        const mobile = window.matchMedia("(max-width: 760px)").matches;
+        const mobile = mobileSidebarQuery.matches;
         const sidebarWidth = sidebar.offsetWidth;
-        const sidebarHeight = sidebar.offsetHeight;
         const collapsed = sidebar.classList.contains("collapsed");
-        const leftPadding = mobile || collapsed ? 20 : sidebarWidth + 20;
-        const topPadding = mobile ? 60 : 80;
-        const bottomPadding = mobile && !sidebar.classList.contains("collapsed")
-          ? sidebarHeight + 20
-          : 20;
+        const leftPadding = mobile ? 0 : collapsed ? 20 : sidebarWidth + 20;
+        const topPadding = mobile ? 100 : 80;
+        const bottomPadding = 20;
         const controls = document.querySelector("#map .leaflet-top.leaflet-left");
         if (controls) {
           controls.style.left = `${mobile ? 8 : collapsed ? 54 : sidebarWidth + 58}px`;
@@ -979,16 +1032,23 @@
         const limitBlink = state.roadRecords.length > 800;
         state.roadRecords.forEach((record, index) => {
           const type = record.feature.properties.highway;
-          const animation = mode === "blink" && limitBlink && !["primary", "secondary"].includes(type)
-            ? "static" : mode;
+          const animateOnMobile = ["motorway", "trunk", "primary", "secondary"].includes(type);
+          const reduceMobileMotion = mobileSidebarQuery.matches && mode !== "static" && !animateOnMobile;
+          const animation = (mode === "blink" && limitBlink && !["primary", "secondary"].includes(type)) ||
+            reduceMobileMotion ? "static" : mode;
           [record.glow, record.core].forEach((group) => roadPaths(group, (path) => {
-            path.getElement()?.classList.remove("road-blink", "road-flow", "road-travel");
-            path.getElement()?.style.setProperty("--road-color", ROAD_COLORS[type]);
-            path.getElement()?.style.setProperty("--road-duration", `${(1.4 / state.roadSpeed) * (type === "tertiary" ? 1.45 : type === "primary" ? .72 : 1)}s`);
-            path.getElement()?.style.setProperty("--road-delay", `${(index % 13) / 7}s`);
-            if (animation === "blink") path.getElement()?.classList.add("road-blink");
-            if (animation === "flow") path.getElement()?.classList.add("road-flow");
-            if (animation === "pulse") path.getElement()?.classList.add("road-travel");
+            const element = path.getElement();
+            if (!element) return;
+            element.classList.remove("road-blink", "road-flow", "road-travel", "road-flow-mobile");
+            element.style.setProperty("--road-color", ROAD_COLORS[type]);
+            element.style.setProperty("--road-duration", `${(1.4 / state.roadSpeed) * (type === "tertiary" ? 1.45 : type === "primary" ? .72 : 1)}s`);
+            element.style.setProperty("--road-delay", `${(index % 13) / 7}s`);
+            if (animation === "blink") element.classList.add("road-blink");
+            if (animation === "flow") {
+              element.classList.add("road-flow");
+              if (mobileSidebarQuery.matches) element.classList.add("road-flow-mobile");
+            }
+            if (animation === "pulse") element.classList.add("road-travel");
           }));
         });
       }
@@ -1367,7 +1427,15 @@
         const collapsed = sidebar.classList.toggle("collapsed");
         document.body.classList.toggle("sidebar-collapsed", collapsed);
         updateSidebarToggleLabel();
+        map.invalidateSize({ pan: false });
         setTimeout(fitCityToVisibleMap, 220);
+      });
+      $("mobile-controls-open").addEventListener("click", () => setMobileSidebarOpen(true));
+      $("sidebar-close").addEventListener("click", () => setMobileSidebarOpen(false));
+      map.on("click", () => {
+        if (document.documentElement.classList.contains("mobile-panel-open")) {
+          setMobileSidebarOpen(false);
+        }
       });
       map.on("zoomend", () => {
         state.roadRecords.forEach((record) => [record.glow, record.core].forEach((group) => {
@@ -1376,14 +1444,33 @@
         setRoadMode(state.roadMode);
         refreshRoadNames();
       });
+      function handleViewportResize() {
+        const mobile = mobileSidebarQuery.matches;
+        document.documentElement.classList.toggle("mobile-screen", mobile);
+        if (mobile !== mobileViewport) {
+          mobileViewport = mobile;
+          document.documentElement.classList.remove("mobile-panel-open");
+          $("mobile-controls-open").setAttribute("aria-expanded", "false");
+          $("sidebar").classList.remove("collapsed");
+          document.body.classList.remove("sidebar-collapsed");
+          updateSidebarToggleLabel();
+          setRoadMode(state.roadMode);
+        }
+        map.invalidateSize({ pan: false });
+        clearTimeout(state.mapLayoutTimer);
+        state.mapLayoutTimer = setTimeout(() => {
+          map.invalidateSize({ pan: false });
+          fitCityToVisibleMap();
+        }, 120);
+      }
+
       window.addEventListener("resize", () => {
         state.areaChart?.resize();
         state.weightsChart?.resize();
         state.sensitivityChart?.resize();
-        updateSidebarToggleLabel();
-        clearTimeout(state.mapLayoutTimer);
-        state.mapLayoutTimer = setTimeout(fitCityToVisibleMap, 120);
+        handleViewportResize();
       });
+      mobileSidebarQuery.addEventListener?.("change", handleViewportResize);
       if ("ResizeObserver" in window) {
         new ResizeObserver(() => {
           clearTimeout(state.mapLayoutTimer);
@@ -1391,6 +1478,11 @@
         }).observe($("sidebar"));
       }
 
+      document.documentElement.classList.toggle("mobile-screen", mobileViewport);
+      document.documentElement.classList.remove("mobile-panel-open");
+      $("sidebar").classList.remove("collapsed");
+      document.body.classList.remove("sidebar-collapsed");
+      $("mobile-controls-open").setAttribute("aria-expanded", "false");
       updateSidebarToggleLabel();
       loadData().catch((error) => {
         console.error(error);
