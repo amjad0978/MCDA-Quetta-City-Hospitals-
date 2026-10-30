@@ -1,0 +1,1403 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#05070d">
+  <title>Quetta | Hospital Site Suitability</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #05070d;
+      --panel: linear-gradient(145deg, #05070d, #0a1428);
+      --panel-solid: #0a1428;
+      --card: #0d1b33;
+      --card-border: #1e3a66;
+      --line: rgba(61, 165, 255, .3);
+      --cyan: #3da5ff;
+      --blue: #1e88ff;
+      --magenta: #ff2bd6;
+      --gold: #ffd166;
+      --text: #dbe7ff;
+      --muted: #7f98c2;
+      --sidebar-width: 300px;
+      font-family: Inter, system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body, #map { width: 100%; height: 100%; margin: 0; }
+    body { overflow: hidden; color: var(--text); background: var(--bg); }
+    button, input, select { font: inherit; }
+    button { color: inherit; cursor: pointer; }
+    #map { position: absolute; inset: 0; z-index: 0; background: var(--bg); }
+    .map-vignette {
+      position: fixed; z-index: 350; inset: 0; pointer-events: none;
+      background: radial-gradient(ellipse at center, transparent 48%, rgba(3, 5, 11, .38) 100%);
+    }
+    .topbar {
+      position: fixed; z-index: 800; top: 14px; left: 14px; right: 14px;
+      min-height: 56px; padding: 9px 13px; display: flex; align-items: center;
+      justify-content: space-between; gap: 12px; border: 1px solid var(--line);
+      border-radius: 10px; background: linear-gradient(120deg, rgba(5,7,13,.96), rgba(10,20,40,.94));
+      backdrop-filter: blur(12px); box-shadow: 0 8px 34px #0008;
+      animation: fadeIn .8s ease both;
+    }
+    .title-copy { min-width: 0; flex: 1 1 auto; }
+    .title-kicker { color: var(--cyan); font-size: 9px; font-weight: 800; letter-spacing: 2px; }
+    h1 { margin: 3px 0 0; overflow: hidden; color: #f3fcff; font-size: clamp(11px, 1.2vw, 16px); letter-spacing: .9px; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 0 15px #00f0ff76; }
+    .header-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 7px; }
+    .header-btn, .primary-btn, .quiet-btn {
+      min-height: 32px; padding: 0 10px; border: 1px solid #2778d6;
+      border-radius: 10px; background: #102547; color: var(--text); font-size: 9px;
+      font-weight: 700; transition: border-color .18s ease, color .18s ease, background .18s ease, box-shadow .18s ease, transform .18s ease;
+    }
+    .header-btn { color: #fff; background: linear-gradient(135deg, #1555a4, #1e88ff); }
+    .header-btn:hover, .quiet-btn:hover { border-color: #65b5ff; color: #fff; background: #1e4b83; box-shadow: 0 0 14px #1e88ff42; transform: translateY(-1px); }
+    .primary-btn { border-color: var(--blue); color: #fff; background: var(--blue); }
+    .primary-btn:hover { border-color: #65b5ff; color: #fff; background: #3da5ff; box-shadow: 0 0 20px #1e88ff66; }
+    .sidebar {
+      position: fixed; z-index: 700; inset: 82px auto 14px 14px;
+      width: var(--sidebar-width); min-width: 280px; max-width: 320px;
+      overflow: auto; padding: 12px; border: 1px solid var(--card-border); border-radius: 10px;
+      background: var(--panel); backdrop-filter: blur(12px);
+      box-shadow: 0 15px 50px #0009, 0 0 18px #1e88ff14; scrollbar-color: #1e4e89 #07111a;
+      scrollbar-width: thin; animation: fadeIn .6s ease both;
+      transition: transform .22s ease, width .22s ease, padding .22s ease, border-color .22s ease;
+    }
+    .sidebar::-webkit-scrollbar { width: 6px; }
+    .sidebar::-webkit-scrollbar-thumb { border-radius: 10px; background: #1e4e89; }
+    .sidebar.collapsed { transform: translateX(calc(-100% - 16px)); pointer-events: none; }
+    .sidebar-toggle {
+      position: fixed; z-index: 850; top: 92px; left: calc(14px + var(--sidebar-width) + 10px);
+      display: grid; width: 34px; min-height: 34px; padding: 0; place-items: center;
+      border: 1px solid #2778d6; border-radius: 10px; color: #fff; background: #102547;
+      box-shadow: 0 4px 14px #0008; font-size: 17px; font-weight: 800;
+      transition: left .22s ease, background .18s ease, box-shadow .18s ease;
+    }
+    .sidebar-toggle:hover { background: var(--blue); box-shadow: 0 0 14px #1e88ff55; }
+    body.sidebar-collapsed .sidebar-toggle { left: 14px; }
+    .status-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 1px 2px 10px; }
+    .status-pill { max-width: 77%; padding: 5px 8px; overflow: hidden; border: 1px solid #24558d; border-radius: 99px; color: #a9d5ff; background: #0b1c34; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+    .status-pill.warn { border-color: #705626; color: #e5c986; background: #201a10; }
+    .section {
+      margin: 0 0 10px; padding: 10px; border: 1px solid var(--card-border);
+      border-radius: 10px; background: var(--card); box-shadow: 0 0 14px #1e88ff0e;
+    }
+    .section-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
+    .section h2 { margin: 0; color: var(--cyan); font-size: 10px; letter-spacing: .9px; text-transform: uppercase; }
+    .section h2::before { content: ""; display: inline-block; width: 5px; height: 5px; margin: 0 7px 2px 0; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 7px var(--cyan); }
+    .section small, .hint { color: var(--muted); font-size: 8px; line-height: 1.45; }
+    .segmented { display: flex; gap: 4px; padding: 3px; border: 1px solid #1e3a66; border-radius: 10px; background: #071224; }
+    .segmented button { flex: 1; padding: 6px 5px; border: 0; border-radius: 7px; color: #9bb1d5; background: transparent; font-size: 8px; font-weight: 700; transition: .18s ease; }
+    .segmented button:hover { color: #fff; background: #132d50; }
+    .segmented button.active { color: #fff; background: var(--blue); box-shadow: 0 0 11px #1e88ff44; }
+    .weight-line { margin: 9px 0; }
+    .weight-top { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; font-size: 9px; }
+    .weight-top output { color: var(--cyan); font-variant-numeric: tabular-nums; }
+    input[type="range"] { width: 100%; height: 4px; accent-color: var(--blue); cursor: pointer; }
+    input:disabled { opacity: .35; cursor: not-allowed; }
+    .button-row { display: flex; gap: 6px; margin-top: 8px; }
+    .button-row > button { flex: 1; }
+    .quiet-btn { min-height: 29px; font-size: 8px; }
+    .ahp-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin: 8px 0; }
+    .mini-stat { padding: 7px 5px; border: 1px solid var(--card-border); border-radius: 8px; text-align: center; background: #09172c; box-shadow: 0 0 10px #1e88ff12; }
+    .mini-stat span { display: block; color: var(--muted); font-size: 8px; }
+    .mini-stat strong { display: block; margin-top: 3px; color: var(--cyan); font-size: 10px; }
+    .cr-badge { display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border: 1px solid #1a704a; border-radius: 99px; color: #82ffc4; background: #062016; font-size: 9px; font-weight: 800; }
+    .cr-badge.bad { border-color: #8b323b; color: #ff9aa1; background: #260c12; }
+    .matrix-wrap { max-height: 235px; overflow: auto; border: 1px solid var(--card-border); border-radius: 8px; scrollbar-color: #1e4e89 #07111a; }
+    table { width: 100%; border-collapse: collapse; font-size: 8px; }
+    th, td { padding: 6px 5px; border-bottom: 1px solid #142532; text-align: center; }
+    th { position: sticky; z-index: 1; top: 0; color: #a9d5ff; background: #10213b; font-weight: 700; }
+    td:first-child, th:first-child { position: sticky; left: 0; z-index: 2; color: var(--text); background: #10213b; text-align: left; }
+    .matrix-wrap select { width: 47px; padding: 4px 2px; border: 1px solid #315987; border-radius: 7px; color: var(--text); background: #08152a; font-size: 8px; }
+    .matrix-wrap select:disabled { opacity: .65; }
+    .weight-table-wrap { max-height: 130px; margin-top: 7px; overflow: auto; }
+    .weight-table td:first-child { position: static; background: transparent; }
+    .legend { display: flex; flex-wrap: wrap; gap: 7px 10px; margin-top: 9px; color: var(--text); font-size: 8px; }
+    .legend-item { display: flex; align-items: center; gap: 5px; }
+    .legend-swatch { width: 12px; height: 8px; border-radius: 2px; }
+    .opacity-row, .inline-control { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; color: var(--text); font-size: 8px; }
+    .opacity-row input { max-width: 155px; }
+    .toggle-line { display: flex; align-items: center; gap: 7px; margin: 7px 0; color: var(--text); font-size: 8px; }
+    .toggle-line input { accent-color: var(--blue); }
+    .road-type-row { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; }
+    .road-legend { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px 5px; margin: 7px 0; }
+    .road-legend-item { display: flex; align-items: center; gap: 5px; color: var(--text); font-size: 7px; white-space: nowrap; }
+    .road-legend-line { width: 15px; border-top: 3px solid var(--road-color); filter: drop-shadow(0 0 3px var(--road-color)); }
+    .road-name { color: white; font-size: 11px; font-weight: 700; text-shadow: -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000, 1px 1px 2px #000, 0 0 5px #000; }
+    .dark-osm-fallback { filter: grayscale(1) invert(1) brightness(.52) contrast(1.18); }
+    .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .stat-card { min-width: 0; padding: 8px; border: 1px solid var(--card-border); border-radius: 8px; background: #09172c; box-shadow: 0 0 10px #1e88ff12; }
+    .stat-card span { display: block; min-height: 22px; color: var(--muted); font-size: 8px; line-height: 1.3; }
+    .stat-card strong { display: block; margin-top: 3px; overflow: hidden; color: #e9fcff; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+    .chart-box { position: relative; height: 150px; }
+    .chart-box.short { height: 120px; }
+    .compare-meta { margin: 5px 0 7px; color: #a9c5d6; font-size: 9px; }
+    .rank-list { display: grid; gap: 4px; max-height: 250px; overflow: auto; }
+    .rank-item { display: grid; grid-template-columns: 24px minmax(0,1fr) auto; align-items: center; gap: 7px; padding: 6px 7px; border: 1px solid var(--card-border); border-radius: 8px; color: var(--text); background: #09172c; text-align: left; font-size: 8px; transition: .18s ease; }
+    .rank-item:hover { border-color: var(--cyan); background: #102747; }
+    .rank-num { color: var(--gold); font-weight: 800; }
+    .rank-item small { color: var(--muted); }
+    .map-vignette { pointer-events: none; }
+    .leaflet-container { font-family: Inter, system-ui, sans-serif; background: #05070d; }
+    .leaflet-top.leaflet-left { top: 82px; left: 8px; }
+    .leaflet-top.leaflet-right { top: 82px; right: 8px; }
+    .leaflet-control-layers, .leaflet-bar, .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+      border: 1px solid var(--line) !important; color: var(--text) !important;
+      background: rgba(8,13,22,.94) !important; box-shadow: 0 4px 18px #0009 !important;
+    }
+    .leaflet-control-layers-toggle { filter: invert(1) sepia(1) saturate(4) hue-rotate(175deg); }
+    .leaflet-control-layers label, .leaflet-control-layers-separator, .leaflet-control-attribution { color: var(--text) !important; }
+    .leaflet-control-attribution { background: rgba(5,8,14,.8) !important; }
+    .leaflet-bar a, .leaflet-bar a:hover { color: var(--cyan) !important; background: #0a1428 !important; border-bottom-color: #1e3a66 !important; }
+    .leaflet-popup-content { margin: 10px 12px; color: var(--text); font-size: 9px; line-height: 1.6; }
+    .popup-title { margin-bottom: 3px; color: var(--cyan); font-weight: 800; }
+    .leaflet-tooltip { border: 1px solid #315987; color: var(--text); background: #09172cf2; box-shadow: 0 3px 12px #0008; font-size: 8px; }
+    .leaflet-tooltip::before { border-top-color: #315987; }
+    .site-marker { width: 25px; height: 25px; display: grid; place-items: center; border: 1px solid #caffdc; border-radius: 50%; color: #04150d; background: #54ff9f; box-shadow: 0 0 8px #54ff9f, 0 0 18px #00d978a8; font-size: 10px; font-weight: 900; animation: markerPulse 1.8s ease-in-out infinite; }
+    .unavailable-note { display: block; margin-top: 3px; color: #83909f; font-size: 8px; }
+    .hospital-marker { position: relative; width: 20px; height: 20px; display: grid; place-items: center; border: 1px solid white; border-radius: 50%; color: white; background: #ef3340; font-size: 14px; font-weight: 900; box-shadow: 0 0 7px #ff425e; }
+    .hospital-marker::after { position: absolute; inset: -5px; border: 2px solid #ff425e; border-radius: 50%; content: ""; animation: hospitalPulse 1.8s ease-out infinite; }
+    .leaflet-div-icon.hospital-marker-icon { border: 0; background: transparent; }
+    .leaflet-div-icon.hospital-marker-icon .hospital-marker { background: #ef3340; }
+    .excluded-cell { fill: #737e89; fill-opacity: .42; stroke: #c3ccd5; stroke-opacity: .72; stroke-width: .8px; stroke-dasharray: 2 3; }
+    .missing-score-cell { fill: #858f99; fill-opacity: .48; stroke: #d3dae0; stroke-opacity: .8; stroke-width: .8px; stroke-dasharray: 3 3; }
+    .road-path { fill: none; vector-effect: non-scaling-stroke; }
+    .road-halo, .road-glow { pointer-events: none; }
+    .road-glow { filter: drop-shadow(0 0 7px var(--road-color)); }
+    .road-core { filter: drop-shadow(0 0 5px var(--road-color)); }
+    .road-core:hover { filter: drop-shadow(0 0 10px var(--road-color)); }
+    .road-blink { animation: pulse var(--road-duration, 1.4s) ease-in-out infinite; animation-delay: var(--road-delay, 0s); }
+    .road-flow { stroke-dasharray: 12 18; animation: roadFlow var(--road-duration, 1.4s) linear infinite; }
+    .road-travel { stroke-dasharray: 1 28; stroke-linecap: round; animation: roadFlow var(--road-duration, 1.4s) linear infinite; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulse { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
+    @keyframes roadFlow { to { stroke-dashoffset: -60; } }
+    @keyframes markerPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.13); } }
+    @keyframes hospitalPulse { 0% { opacity: .8; transform: scale(.7); } 100% { opacity: 0; transform: scale(1.6); } }
+    .message { margin: 0 0 8px; padding: 7px; border: 1px solid #705626; border-radius: 8px; color: #d9c18c; background: #1a170f; font-size: 8px; line-height: 1.45; }
+    .message.error { border-color: #8b323b; color: #ffb6bc; background: #260c12; }
+    .empty-note { padding: 8px; border: 1px dashed #29404b; border-radius: 6px; color: #98afc2; font-size: 9px; line-height: 1.5; }
+    @media (max-width: 760px) {
+      .sidebar { inset: auto 8px 8px; width: auto; min-width: 0; max-width: none; max-height: 62vh; padding: 10px; border-radius: 10px; }
+      .topbar { top: 8px; left: 8px; right: 8px; min-height: 48px; padding: 7px 9px; }
+      .leaflet-top.leaflet-left { top: 58px; left: 8px; }
+      .leaflet-top.leaflet-right { top: 58px; }
+      .header-actions .optional-action { display: none; }
+      h1 { max-width: 59vw; font-size: 12px; letter-spacing: .7px; }
+      .title-kicker { font-size: 7px; letter-spacing: 1.3px; }
+      .sidebar-toggle { top: auto; left: auto; right: 15px; bottom: calc(62vh + 17px); display: block; width: auto; min-height: 32px; padding: 0 10px; font-size: 8px; }
+      body.sidebar-collapsed .sidebar-toggle { left: auto; right: 15px; bottom: 14px; }
+      .sidebar.collapsed { max-height: 0; padding: 0; overflow: hidden; border-width: 0; transform: none; }
+      .section { padding: 9px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="map" aria-label="Interactive Quetta hospital suitability map"></div>
+  <div class="map-vignette" aria-hidden="true"></div>
+  <header class="topbar">
+    <div class="title-copy">
+      <div class="title-kicker">SPATIAL DECISION SUPPORT · BALOCHISTAN, PAKISTAN</div>
+      <h1>QUETTA HOSPITAL SITE SUITABILITY</h1>
+    </div>
+    <div class="header-actions">
+      <button id="sensitivity-button" class="header-btn optional-action" type="button">Run sensitivity</button>
+      <button id="top10-export" class="header-btn optional-action" type="button">Top 10 CSV</button>
+      <button id="ahp-export" class="header-btn optional-action" type="button">AHP CSV</button>
+      <button id="fullscreen-button" class="primary-btn" type="button" aria-label="Toggle fullscreen">Fullscreen</button>
+    </div>
+  </header>
+  <aside id="sidebar" class="sidebar">
+    <div class="status-row">
+      <span id="data-status" class="status-pill">Loading local layers…</span>
+      <span id="cell-count" class="hint"></span>
+    </div>
+    <div id="messages"></div>
+    <section class="section">
+      <div class="section-head"><h2>Model &amp; weights</h2><span class="hint">Live recalculation</span></div>
+      <div id="method-switch" class="segmented" aria-label="Suitability method">
+        <button type="button" data-method="WLC" class="active">WLC</button>
+        <button type="button" data-method="TOPSIS">TOPSIS</button>
+      </div>
+      <p class="hint" id="method-help">Weighted linear combination of city-wide min-max criterion scores.</p>
+      <div id="weight-mode" class="segmented" aria-label="Weighting mode">
+        <button type="button" data-mode="manual" class="active">Manual</button>
+        <button type="button" data-mode="ahp">AHP</button>
+      </div>
+      <div id="manual-panel">
+        <div id="weight-sliders"></div>
+        <div class="button-row">
+          <button id="equal-weights" class="quiet-btn" type="button">Equal</button>
+          <button id="default-weights" class="quiet-btn" type="button">Default</button>
+        </div>
+      </div>
+      <div id="ahp-panel" hidden>
+        <div class="ahp-summary">
+          <div class="mini-stat"><span>λ max</span><strong id="lambda-value">—</strong></div>
+          <div class="mini-stat"><span>Consistency index</span><strong id="ci-value">—</strong></div>
+          <div class="mini-stat"><span>Consistency ratio</span><strong id="cr-value">—</strong></div>
+        </div>
+        <div class="section-head"><span id="cr-badge" class="cr-badge">CR &lt; 0.10</span><span id="inconsistent-pair" class="hint"></span></div>
+        <div class="matrix-wrap"><table id="ahp-matrix"></table></div>
+        <div class="weight-table-wrap"><table id="ahp-weights"></table></div>
+        <button id="apply-ahp" class="primary-btn" style="width:100%;margin-top:8px" type="button">Apply AHP weights</button>
+      </div>
+      <div class="chart-box short"><canvas id="weights-chart" aria-label="Criterion weights donut chart"></canvas></div>
+    </section>
+    <section class="section">
+      <div class="section-head"><h2>Suitability overlay</h2><span id="opacity-value" class="hint">55%</span></div>
+      <label class="toggle-line"><input id="grid-toggle" type="checkbox" checked> Composite suitability grid</label>
+      <div id="criterion-toggles"></div>
+      <div class="opacity-row"><span>Cell opacity</span><input id="opacity-slider" type="range" min="10" max="90" value="55"></div>
+      <div class="legend" id="suitability-legend"></div>
+    </section>
+    <section class="section">
+      <div class="section-head"><h2>Road network</h2><span id="road-count" class="hint">0 roads</span></div>
+      <div id="road-mode" class="segmented" aria-label="Road animation mode">
+        <button type="button" data-road-mode="blink" class="active">Blink</button>
+        <button type="button" data-road-mode="flow">Flow</button>
+        <button type="button" data-road-mode="pulse">Pulse</button>
+        <button type="button" data-road-mode="static">Static</button>
+      </div>
+      <div class="inline-control"><label for="road-speed">Animation speed</label><input id="road-speed" type="range" min="50" max="200" value="100"><span id="road-speed-value">1.0×</span></div>
+      <div class="inline-control"><label for="road-glow">Glow intensity</label><input id="road-glow" type="range" min="1" max="14" value="6"><span id="road-glow-value">6px</span></div>
+      <label class="toggle-line"><input id="road-names" type="checkbox" checked> Road names (major 14+, all 16+)</label>
+      <div class="road-type-row">
+        <label class="toggle-line"><input class="road-type-toggle" data-road-type="motorway" type="checkbox" checked> Motorway</label>
+        <label class="toggle-line"><input class="road-type-toggle" data-road-type="trunk" type="checkbox" checked> Trunk</label>
+        <label class="toggle-line"><input class="road-type-toggle" data-road-type="primary" type="checkbox" checked> Primary</label>
+        <label class="toggle-line"><input class="road-type-toggle" data-road-type="secondary" type="checkbox" checked> Secondary</label>
+        <label class="toggle-line"><input class="road-type-toggle" data-road-type="tertiary" type="checkbox" checked> Tertiary</label>
+        <label class="toggle-line"><input class="road-type-toggle" data-road-type="other" type="checkbox" checked> Residential / other</label>
+      </div>
+      <div class="road-legend" aria-label="Road type colors">
+        <span class="road-legend-item" data-road-legend="motorway"><i class="road-legend-line" style="--road-color:#ff3b3b"></i>Motorway · — km</span>
+        <span class="road-legend-item" data-road-legend="trunk"><i class="road-legend-line" style="--road-color:#ff9f1c"></i>Trunk · — km</span>
+        <span class="road-legend-item" data-road-legend="primary"><i class="road-legend-line" style="--road-color:#ffe600"></i>Primary · — km</span>
+        <span class="road-legend-item" data-road-legend="secondary"><i class="road-legend-line" style="--road-color:#00e5ff"></i>Secondary · — km</span>
+        <span class="road-legend-item" data-road-legend="tertiary"><i class="road-legend-line" style="--road-color:#b388ff"></i>Tertiary · — km</span>
+        <span class="road-legend-item" data-road-legend="other"><i class="road-legend-line" style="--road-color:#8aa0b5"></i>Residential / other · — km</span>
+      </div>
+      <label class="toggle-line"><input id="roads-toggle" type="checkbox" checked> Show roads</label>
+      <p id="road-note" class="hint"></p>
+    </section>
+    <section class="section">
+      <div class="section-head"><h2>Map layers</h2></div>
+      <label class="toggle-line"><input id="hospitals-toggle" type="checkbox" checked> Existing hospitals</label>
+      <label class="toggle-line"><input id="boundary-toggle" type="checkbox" checked> City boundary</label>
+      <div class="stat-grid">
+        <div class="stat-card"><span>Hospitals</span><strong id="hospital-stat">—</strong></div>
+        <div class="stat-card"><span>Very high potential area</span><strong id="area-stat">—</strong></div>
+        <div class="stat-card"><span>Best score</span><strong id="best-stat">—</strong></div>
+      </div>
+    </section>
+    <section class="section">
+      <div class="section-head"><h2>Suitability area</h2><span class="hint">km² · available cells only</span></div>
+      <div class="chart-box"><canvas id="area-chart" aria-label="Area by suitability class"></canvas></div>
+    </section>
+    <section class="section">
+      <div class="section-head"><h2>Top 10 sites</h2><span id="rank-method" class="hint">WLC</span></div>
+      <div class="compare-meta" id="overlap-count">WLC ↔ TOPSIS overlap: —</div>
+      <div class="matrix-wrap">
+        <table id="compare-table">
+          <thead><tr><th>Rank</th><th>WLC cell</th><th>TOPSIS cell</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div id="rank-list" class="rank-list" style="margin-top:8px"></div>
+    </section>
+    <section class="section">
+      <div class="section-head"><h2>Sensitivity</h2><span class="hint">±20% + 200 random sets</span></div>
+      <div id="sensitivity-note" class="hint">Run sensitivity to measure how often each current top site stays in the Top 10.</div>
+      <div class="chart-box"><canvas id="sensitivity-chart" aria-label="Top-site stability chart"></canvas></div>
+    </section>
+    <p class="hint">Decision-support screening only. Validate candidate sites, data coverage, land tenure, access, utilities, and field conditions before planning.</p>
+  </aside>
+  <button id="sidebar-toggle" class="primary-btn sidebar-toggle" type="button"
+    aria-controls="sidebar" aria-expanded="true" aria-label="Collapse sidebar" title="Collapse sidebar">‹</button>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet-textpath@1.2.3/leaflet.textpath.js"></script>
+  <script>
+    "use strict";
+    (() => {
+      const CRITERIA = [
+        { key: "pop", label: "Population", color: "#1e88ff", higherIsBetter: true },
+        { key: "hosp", label: "Hospital access", color: "#3da5ff", higherIsBetter: true },
+        { key: "road", label: "Road access", color: "#77bdff", higherIsBetter: false },
+        { key: "major", label: "Primary / secondary road access", color: "#ffb84d", higherIsBetter: false },
+        { key: "slope", label: "Terrain slope", color: "#4169e1", higherIsBetter: false },
+        { key: "hazard", label: "River separation", color: "#00b8d9", higherIsBetter: true }
+      ];
+      const SUITABILITY_COLORS = ["#1a0f6b", "#7b1fa2", "#d81b60", "#ff9100", "#ffee00"];
+      const CLASS_LABELS = ["Very low", "Low", "Moderate", "High", "Very high"];
+      const ROAD_COLORS = {
+        motorway: "#ff3b3b", trunk: "#ff9f1c", primary: "#ffe600",
+        secondary: "#00e5ff", tertiary: "#b388ff", other: "#8aa0b5"
+      };
+      const ROAD_LABELS = {
+        motorway: "Motorway", trunk: "Trunk", primary: "Primary",
+        secondary: "Secondary", tertiary: "Tertiary", other: "Residential / other"
+      };
+      const ROAD_ORDER = ["other", "tertiary", "secondary", "primary", "trunk", "motorway"];
+      const RI = [0, .58, .90, 1.12, 1.24, 1.32, 1.41, 1.45, 1.49, 1.51];
+      const $ = (id) => document.getElementById(id);
+      const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[c]);
+      const state = {
+        metadata: null, criteria: CRITERIA, active: [], grid: null, gridLayer: null,
+        hospitals: null, roads: null, boundary: null, city: null, roadRecords: [], sites: [],
+        method: "WLC", weightMode: "manual", weights: {}, manual: {}, opacity: .55,
+        roadMode: "blink", roadSpeed: 1, roadGlow: 6, ahpApplied: false,
+        matrix: CRITERIA.map((_, i) => CRITERIA.map((__, j) => i === j ? 1 : 1)),
+        areaChart: null, weightsChart: null, sensitivityChart: null,
+        wlcRank: [], topsisRank: [], classAreas: [], criterionLayer: null,
+        normalizedById: new Map(), criterionClassById: {}, classById: new Map(),
+        scoreById: new Map(), classRanges: []
+      };
+      const map = L.map("map", { zoomControl: true, preferCanvas: false, minZoom: 11, maxZoom: 18 })
+        .setView([30.1414, 67.0774], 11);
+      const tileSettings = { maxZoom: 18, attribution: "&copy; OpenStreetMap contributors" };
+      const cartoLayer = L.tileLayer(
+          "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",
+          { ...tileSettings, subdomains: "abcd", attribution: "&copy; OpenStreetMap contributors &copy; CARTO" }
+      );
+      const darkFallback = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          ...tileSettings, className: "dark-osm-fallback"
+      });
+      const baseLayers = {
+          "Dark · keyless OSM fallback": darkFallback,
+          "CartoDB dark_nolabels": cartoLayer,
+          "OpenStreetMap": L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", tileSettings),
+        "Esri Satellite": L.tileLayer(
+          "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+          { ...tileSettings, attribution: "Tiles &copy; Esri" }
+        )
+      };
+      darkFallback.addTo(map);
+      L.control.layers(baseLayers, {}, { position: "topleft", collapsed: true }).addTo(map);
+      L.control.scale({ imperial: false, position: "bottomright" }).addTo(map);
+
+      function notify(message, type = "warning") {
+        const node = document.createElement("div");
+        node.className = `message${type === "error" ? " error" : ""}`;
+        node.textContent = message;
+        $("messages").appendChild(node);
+      }
+
+      function setStatus(message, warning = false) {
+        $("data-status").textContent = message;
+        $("data-status").classList.toggle("warn", warning);
+      }
+
+      function updateSidebarToggleLabel() {
+        const toggle = $("sidebar-toggle");
+        const collapsed = $("sidebar").classList.contains("collapsed");
+        const mobile = window.matchMedia("(max-width: 760px)").matches;
+        toggle.textContent = mobile
+          ? collapsed ? "Show controls" : "Hide controls"
+          : collapsed ? "›" : "‹";
+        toggle.setAttribute("aria-expanded", String(!collapsed));
+        toggle.setAttribute("aria-label", collapsed ? "Expand sidebar" : "Collapse sidebar");
+        toggle.title = collapsed ? "Expand sidebar" : "Collapse sidebar";
+      }
+
+      function fitCityToVisibleMap() {
+        if (!state.city) return;
+        const bounds = state.city.getBounds();
+        if (!bounds.isValid()) return;
+
+        const sidebar = $("sidebar");
+        const mobile = window.matchMedia("(max-width: 760px)").matches;
+        const sidebarWidth = sidebar.offsetWidth;
+        const sidebarHeight = sidebar.offsetHeight;
+        const collapsed = sidebar.classList.contains("collapsed");
+        const leftPadding = mobile || collapsed ? 20 : sidebarWidth + 20;
+        const topPadding = mobile ? 60 : 80;
+        const bottomPadding = mobile && !sidebar.classList.contains("collapsed")
+          ? sidebarHeight + 20
+          : 20;
+        const controls = document.querySelector("#map .leaflet-top.leaflet-left");
+        if (controls) {
+          controls.style.left = `${mobile ? 8 : collapsed ? 54 : sidebarWidth + 58}px`;
+          controls.style.top = `${topPadding + 2}px`;
+        }
+
+        map.invalidateSize({ pan: false });
+        map.fitBounds(bounds, {
+          paddingTopLeft: [leftPadding, topPadding],
+          paddingBottomRight: [20, bottomPadding]
+        });
+      }
+
+      function activeCriteria() {
+        return state.criteria.filter((criterion) => state.active.includes(criterion.key));
+      }
+
+      function normalizeWeights(weights) {
+        const active = activeCriteria();
+        const total = active.reduce((sum, criterion) => sum + Math.max(0, Number(weights[criterion.key]) || 0), 0);
+        const result = {};
+        active.forEach((criterion) => {
+          result[criterion.key] = total > 0
+            ? Math.max(0, Number(weights[criterion.key]) || 0) / total
+            : 1 / Math.max(1, active.length);
+        });
+        return result;
+      }
+
+      function formattedWeight(key) {
+        return `${((state.weights[key] || 0) * 100).toFixed(1)}%`;
+      }
+
+      function renderWeightSliders() {
+        $("weight-sliders").innerHTML = state.criteria.map((criterion) => {
+          const item = state.metadata.criteria.find((entry) => entry.key === criterion.key);
+          const available = state.active.includes(criterion.key);
+          const value = Number(state.manual[criterion.key] ?? item?.default_weight ?? 0);
+          return `<div class="weight-line">
+            <div class="weight-top"><label for="weight-${criterion.key}">${escapeHtml(criterion.label)}</label>
+            ${available ? `<output id="weight-out-${criterion.key}">${formattedWeight(criterion.key)}</output>` : '<span class="unavailable-note">No local data · excluded</span>'}</div>
+            <input id="weight-${criterion.key}" type="range" min="0" max="100" value="${value}" ${available ? "" : "disabled"}
+              aria-label="${escapeHtml(criterion.label)} weight">
+          </div>`;
+        }).join("");
+        state.criteria.forEach((criterion) => {
+          const slider = $(`weight-${criterion.key}`);
+          slider?.addEventListener("input", () => {
+            state.manual[criterion.key] = Number(slider.value);
+            state.weightMode = "manual";
+            setWeightModeButtons();
+            recalculate();
+          });
+        });
+      }
+
+      function setWeightModeButtons() {
+        document.querySelectorAll("#weight-mode button").forEach((button) => {
+          button.classList.toggle("active", button.dataset.mode === state.weightMode);
+        });
+        $("manual-panel").hidden = state.weightMode !== "manual";
+        $("ahp-panel").hidden = state.weightMode !== "ahp";
+      }
+
+      function renderCriterionToggles() {
+        $("criterion-toggles").innerHTML = state.criteria.map((criterion) => {
+          const available = state.active.includes(criterion.key);
+          return `<label class="toggle-line"><input type="checkbox" class="criterion-toggle" data-criterion="${criterion.key}" ${available ? "" : "disabled"}>
+            Criterion: ${escapeHtml(criterion.label)}${available ? "" : '<span class="unavailable-note">No local data · excluded</span>'}</label>`;
+        }).join("");
+        document.querySelectorAll(".criterion-toggle").forEach((toggle) => {
+          toggle.addEventListener("change", () => {
+            if (toggle.checked) {
+              document.querySelectorAll(".criterion-toggle").forEach((other) => {
+                if (other !== toggle) other.checked = false;
+              });
+              state.criterionLayer = toggle.dataset.criterion;
+            } else if (state.criterionLayer === toggle.dataset.criterion) {
+              state.criterionLayer = null;
+            }
+            updateGridStyle();
+          });
+        });
+      }
+
+      function criterionName(key) {
+        return state.criteria.find((criterion) => criterion.key === key)?.label || key;
+      }
+
+      function renderLegend() {
+        $("suitability-legend").innerHTML = SUITABILITY_COLORS.map((color, index) => {
+          const range = state.classRanges[index];
+          const rangeText = range
+            ? `${range.min.toFixed(2)} - ${range.max.toFixed(2)}`
+            : "—";
+          return `<span class="legend-item"><i class="legend-swatch" style="background:${color}"></i>${CLASS_LABELS[index]}: ${rangeText}</span>`;
+        }).join("");
+      }
+
+      function renderAHP() {
+        const n = state.criteria.length;
+        const options = [9, 8, 7, 6, 5, 4, 3, 2, 1, 1 / 2, 1 / 3, 1 / 4, 1 / 5, 1 / 6, 1 / 7, 1 / 8, 1 / 9];
+        const showValue = (value) => value >= 1 ? String(Number(value.toFixed(3))) : `1/${Math.round(1 / value)}`;
+        let matrixHtml = "<thead><tr><th>Criterion</th>" +
+          state.criteria.map((criterion) => `<th title="${escapeHtml(criterion.label)}">${escapeHtml(criterion.label.slice(0, 5))}</th>`).join("") +
+          "</tr></thead><tbody>";
+        state.criteria.forEach((row, i) => {
+          matrixHtml += `<tr><th>${escapeHtml(row.label)}</th>`;
+          state.criteria.forEach((column, j) => {
+            if (i === j) {
+              matrixHtml += "<td>1</td>";
+            } else if (i > j) {
+              matrixHtml += `<td>${showValue(state.matrix[i][j])}</td>`;
+            } else {
+              const value = state.matrix[i][j];
+              matrixHtml += `<td><select data-i="${i}" data-j="${j}" aria-label="${escapeHtml(row.label)} compared to ${escapeHtml(column.label)}">
+                ${options.map((option) => `<option value="${option}" ${Math.abs(option - value) < 1e-8 ? "selected" : ""}>${showValue(option)}</option>`).join("")}
+              </select></td>`;
+            }
+          });
+          matrixHtml += "</tr>";
+        });
+        $("ahp-matrix").innerHTML = matrixHtml + "</tbody>";
+        document.querySelectorAll("#ahp-matrix select").forEach((select) => {
+          select.addEventListener("change", () => {
+            const i = Number(select.dataset.i);
+            const j = Number(select.dataset.j);
+            state.matrix[i][j] = Number(select.value);
+            state.matrix[j][i] = 1 / Number(select.value);
+            updateAHPValues();
+          });
+        });
+        updateAHPValues();
+      }
+
+      function ahpResult() {
+        const n = state.matrix.length;
+        let vector = Array(n).fill(1 / n);
+        for (let iteration = 0; iteration < 300; iteration += 1) {
+          const next = state.matrix.map((row) =>
+            row.reduce((sum, value, index) => sum + value * vector[index], 0));
+          const total = next.reduce((sum, value) => sum + value, 0);
+          if (!Number.isFinite(total) || total <= 0) break;
+          const normalized = next.map((value) => value / total);
+          const drift = Math.max(...normalized.map((value, index) => Math.abs(value - vector[index])));
+          vector = normalized;
+          if (drift < 1e-12) break;
+        }
+        const lambda = state.matrix.reduce((sum, row, index) => {
+          const weighted = row.reduce((total, value, j) => total + value * vector[j], 0);
+          return sum + weighted / vector[index];
+        }, 0) / n;
+        const ci = n <= 1 ? 0 : Math.max(0, (lambda - n) / (n - 1));
+        const cr = n <= 2 || RI[n] === 0 ? 0 : ci / RI[n];
+        let worst = { error: -1, pair: "None" };
+        for (let i = 0; i < n; i += 1) {
+          for (let j = i + 1; j < n; j += 1) {
+            const expected = vector[i] / vector[j];
+            const error = Math.abs(Math.log(state.matrix[i][j] / expected));
+            if (error > worst.error) {
+              worst = { error, pair: `${state.criteria[i].label} / ${state.criteria[j].label}` };
+            }
+          }
+        }
+        return { vector, lambda, ci, cr, worst: worst.pair };
+      }
+
+      function renderAHPWeights(result) {
+        const rows = state.criteria.map((criterion, index) => {
+          const enabled = state.active.includes(criterion.key);
+          return `<tr><td>${escapeHtml(criterion.label)}</td><td>${enabled ? `${(result.vector[index] * 100).toFixed(2)}%` : "No local data"}</td><td>${enabled ? (state.weights[criterion.key] * 100).toFixed(2) + "%" : "—"}</td></tr>`;
+        }).join("");
+        $("ahp-weights").innerHTML = `<thead><tr><th>Criterion</th><th>AHP</th><th>Applied</th></tr></thead><tbody>${rows}</tbody>`;
+      }
+
+      function updateAHPValues() {
+        const result = ahpResult();
+        $("lambda-value").textContent = result.lambda.toFixed(3);
+        $("ci-value").textContent = result.ci.toFixed(3);
+        $("cr-value").textContent = result.cr.toFixed(3);
+        $("cr-badge").classList.toggle("bad", result.cr >= .1);
+        $("cr-badge").textContent = result.cr < .1 ? "Consistent · CR < 0.10" : "Inconsistent · CR ≥ 0.10";
+        $("inconsistent-pair").textContent = `Most inconsistent: ${result.worst}`;
+        renderAHPWeights(result);
+      }
+
+      function calculateAHPWeights() {
+        const result = ahpResult();
+        const projected = {};
+        state.criteria.forEach((criterion, index) => {
+          projected[criterion.key] = state.active.includes(criterion.key) ? result.vector[index] : 0;
+        });
+        return normalizeWeights(projected);
+      }
+
+      function updateDonut() {
+        const active = activeCriteria();
+        const data = active.map((criterion) => state.weights[criterion.key] * 100);
+        const labels = active.map((criterion) => criterion.label);
+        const colors = active.map((criterion) => criterion.color);
+        if (!state.weightsChart) {
+          state.weightsChart = new Chart($("weights-chart"), {
+            type: "doughnut",
+            data: { labels, datasets: [{ data, backgroundColor: colors, borderColor: "#0a0e19", borderWidth: 3, hoverOffset: 4 }] },
+            options: {
+              responsive: true, maintainAspectRatio: false, cutout: "68%",
+              plugins: {
+                legend: { position: "right", labels: { color: "#c5d6e5", boxWidth: 9, padding: 8, font: { size: 9 } } },
+                tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.parsed.toFixed(1)}%` } }
+              }
+            }
+          });
+        } else {
+          state.weightsChart.data.labels = labels;
+          state.weightsChart.data.datasets[0].data = data;
+          state.weightsChart.data.datasets[0].backgroundColor = colors;
+          state.weightsChart.update();
+        }
+      }
+
+      function readCellScores(feature) {
+        return state.normalizedById.get(feature.properties.cell_id) || {};
+      }
+
+      function prepareNormalizedCriteria() {
+        const eligible = state.grid.features.filter((feature) => !feature.properties.excluded);
+        const ranges = Object.fromEntries(activeCriteria().map((criterion) => {
+          const values = eligible
+            .map((feature) => feature.properties[`raw_${criterion.key}`])
+            .filter((value) => value !== null && value !== undefined && value !== "")
+            .map(Number)
+            .filter(Number.isFinite);
+          return [criterion.key, {
+            min: Math.min(...values),
+            max: Math.max(...values)
+          }];
+        }));
+        state.normalizedById = new Map(state.grid.features.map((feature) => {
+          const props = feature.properties;
+          const normalized = {};
+          activeCriteria().forEach((criterion) => {
+            const value = props[`raw_${criterion.key}`];
+            if (value === null || value === undefined || value === "") return;
+            const raw = Number(value);
+            if (!Number.isFinite(raw)) return;
+            const range = ranges[criterion.key];
+            const scaled = range.max > range.min ? (raw - range.min) / (range.max - range.min) : .5;
+            normalized[criterion.key] = criterion.higherIsBetter ? scaled : 1 - scaled;
+          });
+          return [props.cell_id, normalized];
+        }));
+        state.scoredFeatures = eligible.filter((feature) =>
+          activeCriteria().every((criterion) =>
+            Number.isFinite(state.normalizedById.get(feature.properties.cell_id)?.[criterion.key])
+          )
+        );
+        state.criterionClassById = {};
+        activeCriteria().forEach((criterion) => {
+          const ordered = state.scoredFeatures.map((feature) => ({
+            feature,
+            score: state.normalizedById.get(feature.properties.cell_id)[criterion.key]
+          })).sort((a, b) => a.score - b.score);
+          const classes = new Map();
+          ordered.forEach((item, index) => {
+            classes.set(item.feature.properties.cell_id,
+              Math.min(4, Math.floor(index * 5 / Math.max(1, ordered.length))));
+          });
+          state.criterionClassById[criterion.key] = classes;
+        });
+      }
+
+      function resultFor(method, weightSet) {
+        const active = activeCriteria();
+        if (!active.length) return [];
+        const features = state.scoredFeatures || [];
+        if (!features.length) return [];
+        if (method === "WLC") {
+          return features.map((feature) => {
+            const score = active.reduce((sum, criterion) =>
+              sum + readCellScores(feature)[criterion.key] * (weightSet[criterion.key] || 0), 0);
+            return { feature, score };
+          }).sort((a, b) =>
+            b.score - a.score ||
+            Number(b.feature.properties.area_km2) - Number(a.feature.properties.area_km2));
+        }
+        const weighted = features.map((feature) => ({
+          feature,
+          values: Object.fromEntries(active.map((criterion) => {
+            const key = criterion.key;
+            return [key, readCellScores(feature)[key] * (weightSet[key] || 0)];
+          }))
+        }));
+        const ideal = Object.fromEntries(active.map((criterion) => [
+          criterion.key, weightSet[criterion.key] || 0
+        ]));
+        const anti = Object.fromEntries(active.map((criterion) => [
+          criterion.key, 0
+        ]));
+        return weighted.map((item) => {
+          const positive = Math.sqrt(active.reduce((sum, criterion) =>
+            sum + (item.values[criterion.key] - ideal[criterion.key]) ** 2, 0));
+          const negative = Math.sqrt(active.reduce((sum, criterion) =>
+            sum + (item.values[criterion.key] - anti[criterion.key]) ** 2, 0));
+          return { feature: item.feature, score: positive + negative ? negative / (positive + negative) : 0 };
+        }).sort((a, b) =>
+          b.score - a.score ||
+          Number(b.feature.properties.area_km2) - Number(a.feature.properties.area_km2));
+      }
+
+      function classifyQuantiles(ranked) {
+        const ascending = ranked.slice().sort((a, b) => a.score - b.score);
+        const classes = new Map();
+        const ranges = Array.from({ length: 5 }, () => null);
+        ascending.forEach((item, index) => {
+          const classIndex = Math.min(4, Math.floor(index * 5 / Math.max(1, ascending.length)));
+          const id = item.feature.properties.cell_id;
+          classes.set(id, classIndex);
+          if (!ranges[classIndex]) ranges[classIndex] = { min: item.score, max: item.score };
+          else ranges[classIndex].max = item.score;
+        });
+        return { classes, ranges };
+      }
+
+      function updateGridStyle() {
+        if (!state.gridLayer) return;
+        state.gridLayer.setStyle((feature) => {
+          const props = feature.properties;
+          if (props.excluded) return {
+            color: "#c3ccd5", weight: .8, opacity: .72, dashArray: "2 3",
+            fillColor: "#737e89", fillOpacity: .42, className: "excluded-cell"
+          };
+          const classIndex = state.criterionLayer
+            ? state.criterionClassById[state.criterionLayer]?.get(props.cell_id)
+            : state.classById.get(props.cell_id);
+          if (!Number.isInteger(classIndex)) return {
+            color: "#d3dae0", weight: .8, opacity: .8, dashArray: "3 3",
+            fillColor: "#858f99", fillOpacity: .48, className: "missing-score-cell"
+          };
+          return { color: "transparent", weight: 0, fillColor: SUITABILITY_COLORS[classIndex], fillOpacity: state.opacity };
+        });
+      }
+
+      function popupHtml(feature, score) {
+        const props = feature.properties;
+        const total = Number.isFinite(score) ? `${(score * 100).toFixed(1)}%` : "Unavailable";
+        const scores = state.criteria.map((criterion) => {
+          const value = props[`raw_${criterion.key}`];
+          const raw = value === null || value === undefined || value === "" ? NaN : Number(value);
+          const normalized = readCellScores(feature)[criterion.key];
+          const units = state.metadata.criteria.find((item) => item.key === criterion.key)?.units || "";
+          const rawText = Number.isFinite(raw) ? `${raw.toFixed(0)} ${escapeHtml(units)}` : "No data";
+          return `<div>${escapeHtml(criterion.label)}: ${Number.isFinite(normalized) ? `${(normalized * 100).toFixed(1)}%` : "No data"} <span class="hint">(${rawText})</span></div>`;
+        }).join("");
+        return `<div class="popup-title">Candidate cell ${props.cell_id}</div><div>Suitability: <b>${total}</b></div>
+          <div>Area: ${Number(props.area_km2).toFixed(3)} km²</div>${scores}
+          ${props.excluded ? "<b>Excluded from ranking</b>" : ""}`;
+      }
+
+      function refreshGrid() {
+        updateGridStyle();
+        if (state.gridLayer) {
+          state.gridLayer.eachLayer((layer) => {
+            const feature = layer.feature;
+            const score = state.scoreById.get(feature.properties.cell_id);
+            layer.unbindPopup();
+            layer.bindPopup(popupHtml(feature, score), { maxWidth: 230 });
+          });
+        }
+      }
+
+      function paintCharts(areas) {
+        if (!state.areaChart) {
+          state.areaChart = new Chart($("area-chart"), {
+            type: "bar",
+            data: { labels: CLASS_LABELS, datasets: [{ data: areas, backgroundColor: SUITABILITY_COLORS, borderRadius: 4 }] },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.y.toFixed(2)} km²` } } },
+              scales: {
+                x: { ticks: { color: "#a9bacb", font: { size: 8 } }, grid: { display: false } },
+                y: { beginAtZero: true, ticks: { color: "#91a4b7", font: { size: 8 } }, grid: { color: "#ffffff12" } }
+              }
+            }
+          });
+        } else {
+          state.areaChart.data.datasets[0].data = areas;
+          state.areaChart.update();
+        }
+      }
+
+      function renderCompare() {
+        const wlcIds = new Set(state.wlcRank.slice(0, 10).map((item) => item.feature.properties.cell_id));
+        const topsisIds = new Set(state.topsisRank.slice(0, 10).map((item) => item.feature.properties.cell_id));
+        const overlap = [...wlcIds].filter((id) => topsisIds.has(id)).length;
+        $("overlap-count").textContent = `WLC ↔ TOPSIS overlap: ${overlap} / 10`;
+        $("compare-table").querySelector("tbody").innerHTML = Array.from({ length: 10 }, (_, index) => {
+          const wlc = state.wlcRank[index];
+          const topsis = state.topsisRank[index];
+          return `<tr><td>${index + 1}</td><td>${wlc?.feature.properties.cell_id ?? "—"}</td><td>${topsis?.feature.properties.cell_id ?? "—"}</td></tr>`;
+        }).join("");
+        const ranked = state.method === "WLC" ? state.wlcRank : state.topsisRank;
+        $("rank-method").textContent = state.method;
+        $("rank-list").innerHTML = ranked.slice(0, 10).map((item, index) => {
+          const props = item.feature.properties;
+          return `<button type="button" class="rank-item" data-cell="${props.cell_id}">
+            <span class="rank-num">#${index + 1}</span><span>Cell ${props.cell_id}<small> · ${Number(props.area_km2).toFixed(2)} km²</small></span><b>${(item.score * 100).toFixed(1)}%</b>
+          </button>`;
+        }).join("") || '<div class="empty-note">No eligible cells have complete scores.</div>';
+        document.querySelectorAll(".rank-item").forEach((button) => {
+          button.addEventListener("click", () => {
+            const item = ranked.find((entry) => String(entry.feature.properties.cell_id) === button.dataset.cell);
+            if (!item) return;
+            const bounds = L.geoJSON(item.feature).getBounds();
+            map.flyToBounds(bounds, { maxZoom: 15, padding: [40, 40], duration: .8 });
+          });
+        });
+        state.sites = ranked.slice(0, 10);
+        updateTopMarkers();
+      }
+
+      function updateTopMarkers() {
+        if (!state.topMarkers) state.topMarkers = L.layerGroup().addTo(map);
+        state.topMarkers.clearLayers();
+        const ranked = state.method === "WLC" ? state.wlcRank : state.topsisRank;
+        ranked.slice(0, 10).forEach((item, index) => {
+          const center = L.geoJSON(item.feature).getBounds().getCenter();
+          const marker = L.marker(center, {
+            icon: L.divIcon({ className: "", html: `<div class="site-marker">${index + 1}</div>`, iconSize: [25, 25], iconAnchor: [12, 12] })
+          }).bindPopup(`<div class="popup-title">New hospital candidate · rank ${index + 1}</div>${popupHtml(item.feature, item.score)}`);
+          marker.addTo(state.topMarkers);
+        });
+      }
+
+      function recalculate() {
+        const selected = state.weightMode === "ahp"
+          ? calculateAHPWeights()
+          : normalizeWeights(state.manual);
+        state.weights = selected;
+        state.criteria.forEach((criterion) => {
+          const output = $(`weight-out-${criterion.key}`);
+          if (output) output.textContent = formattedWeight(criterion.key);
+        });
+        updateDonut();
+        updateAHPValues();
+        state.wlcRank = resultFor("WLC", state.weights);
+        state.topsisRank = resultFor("TOPSIS", state.weights);
+        const ranked = state.method === "WLC" ? state.wlcRank : state.topsisRank;
+        const scoresById = new Map(ranked.map((item) => [item.feature.properties.cell_id, item.score]));
+        const areas = Array(5).fill(0);
+        const classified = classifyQuantiles(ranked);
+        state.classById = classified.classes;
+        state.classRanges = classified.ranges;
+        state.scoreById = scoresById;
+        ranked.forEach((item) => {
+          const classIndex = classified.classes.get(item.feature.properties.cell_id);
+          areas[classIndex] += Number(item.feature.properties.area_km2) || 0;
+        });
+        state.classAreas = areas;
+        renderLegend();
+        $("hospital-stat").textContent = String(state.metadata?.counts?.hospitals ?? 0);
+        $("area-stat").textContent = `${areas[4].toFixed(1)}`;
+        $("best-stat").textContent = ranked.length ? `${(ranked[0].score * 100).toFixed(1)}%` : "—";
+        paintCharts(areas);
+        renderCompare();
+        if (state.gridLayer) {
+          state.gridLayer.eachLayer((layer) => {
+            const feature = layer.feature;
+            layer.unbindPopup();
+            layer.bindPopup(popupHtml(feature, scoresById.get(feature.properties.cell_id)), { maxWidth: 230 });
+          });
+          updateGridStyle();
+        }
+      }
+
+      function makeHospitalLayer(data) {
+        return L.geoJSON(data, {
+          pointToLayer: (_, latlng) => L.marker(latlng, {
+            icon: L.divIcon({ className: "hospital-marker-icon", html: '<div class="hospital-marker">+</div>', iconSize: [20, 20], iconAnchor: [10, 10] })
+          }),
+          onEachFeature: (feature, layer) => {
+            const name = feature.properties?.name || "Existing hospital";
+            layer.bindPopup(`<div class="popup-title">${escapeHtml(name)}</div>Existing hospital location`);
+          }
+        });
+      }
+
+      function normalizeRoadType(value) {
+        const type = String(value ?? "").trim().toLowerCase()
+          .replace(/\s+/g, "_")
+          .replace(/(?:_link|-link)$/i, "");
+        if (!type || ["<na>", "nan", "none", "null"].includes(type)) return null;
+        return Object.prototype.hasOwnProperty.call(ROAD_COLORS, type) ? type : "other";
+      }
+
+      function roadType(feature) {
+        const properties = feature?.properties || {};
+        const normalizedFields = new Map(
+          Object.keys(properties).map((key) => [key.toLowerCase().replace(/[^a-z0-9]/g, ""), key])
+        );
+        let hasFallback = false;
+        for (const field of ["highway", "fclass", "road_type", "roadtype", "type", "class"]) {
+          const key = normalizedFields.get(field.replace(/[^a-z0-9]/g, ""));
+          if (!key) continue;
+          const type = normalizeRoadType(properties[key]);
+          if (type && type !== "other") return type;
+          hasFallback ||= type === "other";
+        }
+        return hasFallback ? "other" : null;
+      }
+
+      function roadLengthKm(geometry) {
+        const lineLength = (coordinates) => coordinates.slice(1).reduce((sum, point, index) =>
+          sum + L.latLng(coordinates[index][1], coordinates[index][0])
+            .distanceTo(L.latLng(point[1], point[0])), 0);
+        if (geometry.type === "LineString") return lineLength(geometry.coordinates) / 1000;
+        if (geometry.type === "MultiLineString") {
+          return geometry.coordinates.reduce((sum, line) => sum + lineLength(line), 0) / 1000;
+        }
+        return 0;
+      }
+
+      function roadWeight(type) {
+        return ({ motorway: 5, trunk: 5, primary: 4, secondary: 3, tertiary: 2, other: 1.5 })[type] || 1.5;
+      }
+
+      function isMajorRoad(type) {
+        return ["motorway", "trunk", "primary"].includes(type);
+      }
+
+      function roadStyle(feature, layerType = "core") {
+        const type = roadType(feature) || "other";
+        const color = ROAD_COLORS[type];
+        const weight = roadWeight(type);
+        return {
+          color,
+          weight: layerType === "glow" ? weight + 5 : weight,
+          opacity: layerType === "glow" ? .15 : .9,
+          className: `road-path road-${layerType}`,
+          lineCap: "round",
+          lineJoin: "round"
+        };
+      }
+
+      function roadPaths(layer, callback) {
+        if (layer instanceof L.Polyline) callback(layer);
+        else if (layer.eachLayer) layer.eachLayer((child) => roadPaths(child, callback));
+      }
+
+      function setRoadMode(mode) {
+        state.roadMode = mode;
+        document.querySelectorAll("#road-mode button").forEach((button) => {
+          button.classList.toggle("active", button.dataset.roadMode === mode);
+        });
+        const limitBlink = state.roadRecords.length > 800;
+        state.roadRecords.forEach((record, index) => {
+          const type = record.feature.properties.highway;
+          const animation = mode === "blink" && limitBlink && !["primary", "secondary"].includes(type)
+            ? "static" : mode;
+          [record.glow, record.core].forEach((group) => roadPaths(group, (path) => {
+            path.getElement()?.classList.remove("road-blink", "road-flow", "road-travel");
+            path.getElement()?.style.setProperty("--road-color", ROAD_COLORS[type]);
+            path.getElement()?.style.setProperty("--road-duration", `${(1.4 / state.roadSpeed) * (type === "tertiary" ? 1.45 : type === "primary" ? .72 : 1)}s`);
+            path.getElement()?.style.setProperty("--road-delay", `${(index % 13) / 7}s`);
+            if (animation === "blink") path.getElement()?.classList.add("road-blink");
+            if (animation === "flow") path.getElement()?.classList.add("road-flow");
+            if (animation === "pulse") path.getElement()?.classList.add("road-travel");
+          }));
+        });
+      }
+
+      function applyRoadVisibility() {
+        const enabledRecords = state.roadRecords.filter((record) =>
+          $("roads-toggle").checked &&
+          document.querySelector(`.road-type-toggle[data-road-type="${record.feature.properties.highway}"]`)?.checked
+        ).sort((a, b) =>
+          ROAD_ORDER.indexOf(a.feature.properties.highway) - ROAD_ORDER.indexOf(b.feature.properties.highway)
+        );
+        state.roadRecords.forEach((record) => {
+          [record.glow, record.core].forEach((layer) => {
+            if (map.hasLayer(layer)) map.removeLayer(layer);
+          });
+        });
+        enabledRecords.forEach((record) => {
+          if (isMajorRoad(record.feature.properties.highway)) record.glow.addTo(map);
+          record.core.addTo(map);
+        });
+        setRoadMode(state.roadMode);
+        refreshRoadNames();
+      }
+
+      function refreshRoadNames() {
+        const zoom = map.getZoom();
+        const show = $("road-names").checked;
+        const used = [];
+        const candidates = state.roadRecords
+          .filter((record) => record.feature.properties.name && record.core.getBounds?.())
+          .sort((a, b) =>
+            ROAD_ORDER.indexOf(b.feature.properties.highway) - ROAD_ORDER.indexOf(a.feature.properties.highway)
+          );
+        candidates.forEach((record) => roadPaths(record.core, (path) => {
+          if (!path.setText) return;
+          path.setText("");
+          const type = record.feature.properties.highway;
+          if (!show || !map.hasLayer(record.core) ||
+              (isMajorRoad(type) ? zoom < 14 : zoom < 16)) return;
+          const center = path.getBounds().getCenter();
+          const pixel = map.latLngToLayerPoint(center);
+          if (used.some((point) => point.distanceTo(pixel) < 115)) return;
+          used.push(pixel);
+          path.setText(String(record.feature.properties.name), {
+            repeat: false, center: true, offset: 8,
+            attributes: {
+              fill: "#fff", stroke: "#000", strokeWidth: 3, paintOrder: "stroke",
+              fontSize: "11px", fontWeight: "700", class: "road-name"
+            }
+          });
+        }));
+      }
+
+      function updateRoadLegend() {
+        const totals = Object.fromEntries(Object.keys(ROAD_COLORS).map((type) => [type, 0]));
+        state.roadRecords.forEach((record) => {
+          totals[record.feature.properties.highway] += record.lengthKm;
+        });
+        document.querySelectorAll("[data-road-legend]").forEach((item) => {
+          const type = item.dataset.roadLegend;
+          item.lastChild.textContent = `${ROAD_LABELS[type]} · ${totals[type].toFixed(1)} km`;
+        });
+      }
+
+      function makeRoadLayers(data) {
+        state.roadRecords = data.features.flatMap((sourceFeature) => {
+          const type = roadType(sourceFeature);
+          if (!type) return [];
+          const feature = {
+            ...sourceFeature,
+            properties: {
+              ...(sourceFeature.properties || {}),
+              name: sourceFeature.properties?.name || "",
+              highway: type
+            }
+          };
+          const lengthKm = roadLengthKm(feature.geometry);
+          const single = { type: "FeatureCollection", features: [feature] };
+          const glow = L.geoJSON(single, { style: (item) => roadStyle(item, "glow") });
+          const core = L.geoJSON(single, {
+            style: (item) => roadStyle(item, "core"),
+            onEachFeature: (item, layer) => {
+              const name = item.properties?.name || "Unnamed major road";
+              const type = item.properties?.highway || "other";
+              layer.bindTooltip(`<b>${escapeHtml(name)}</b><br>${escapeHtml(ROAD_LABELS[type])}`, { sticky: true, direction: "top" });
+              layer.on("mouseover", () => {
+                [glow, core].forEach((group) => roadPaths(group, (path) => {
+                  path.setStyle({
+                    color: "#fff",
+                    weight: roadWeight(type) + (group === core ? 2 : 7),
+                    opacity: group === core ? 1 : .3
+                  });
+                  path.getElement()?.style.setProperty("--road-color", "#fff");
+                }));
+              });
+              layer.on("mouseout", () => {
+                [glow, core].forEach((group) => {
+                  group.setStyle((road) => roadStyle(road, group === glow ? "glow" : "core"));
+                  roadPaths(group, (path) => path.getElement()?.style.setProperty("--road-color", ROAD_COLORS[type]));
+                });
+              });
+            }
+          });
+          return [{ feature, glow, core, lengthKm }];
+        });
+        updateRoadLegend();
+        $("road-count").textContent = `${state.roadRecords.length} roads`;
+        $("road-note").textContent = state.roadRecords.length
+          ? "Local roads clipped to the Quetta urban core; labels show for major roads at zoom 14+ and all roads at 16+."
+          : "No city road features were generated. Check the local roads shapefile and rerun prep.py.";
+        applyRoadVisibility();
+        refreshRoadNames();
+      }
+
+      function downloadCsv(filename, rows) {
+        const csv = rows.map((row) => row.map((value) => {
+          const text = String(value ?? "");
+          return `"${text.replace(/"/g, '""')}"`;
+        }).join(",")).join("\r\n");
+        const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }));
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        link.hidden = true;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      function exportTopTen() {
+        const ranked = state.method === "WLC" ? state.wlcRank : state.topsisRank;
+        const rows = [["rank", "method", "cell_id", "latitude", "longitude", "suitability", "area_km2",
+          ...state.criteria.flatMap((criterion) => [`normalized_${criterion.key}`, `raw_${criterion.key}`])]];
+        ranked.slice(0, 10).forEach((item, index) => {
+          const center = L.geoJSON(item.feature).getBounds().getCenter();
+          const props = item.feature.properties;
+          const normalized = readCellScores(item.feature);
+          rows.push([
+            index + 1, state.method, props.cell_id, center.lat.toFixed(5), center.lng.toFixed(5),
+            item.score.toFixed(6), props.area_km2,
+            ...state.criteria.flatMap((criterion) => [
+              Number.isFinite(normalized[criterion.key]) ? normalized[criterion.key].toFixed(6) : "",
+              props[`raw_${criterion.key}`] ?? ""
+            ])
+          ]);
+        });
+        downloadCsv(`quetta_top10_${state.method.toLowerCase()}.csv`, rows);
+      }
+
+      function exportAHP() {
+        const result = ahpResult();
+        const rows = [["type", "criterion", ...state.criteria.map((criterion) => criterion.key), "weight", "lambda_max", "CI", "CR"]];
+        state.criteria.forEach((criterion, index) => {
+          rows.push(["matrix", criterion.key, ...state.matrix[index].map((value) => value.toFixed(6)), "", result.lambda.toFixed(6), result.ci.toFixed(6), result.cr.toFixed(6)]);
+        });
+        state.criteria.forEach((criterion, index) => {
+          rows.push(["weight", criterion.key, ...Array(state.criteria.length).fill(""), result.vector[index].toFixed(8), result.lambda.toFixed(6), result.ci.toFixed(6), result.cr.toFixed(6)]);
+        });
+        downloadCsv("quetta_ahp_matrix_weights.csv", rows);
+      }
+
+      function sensitivity() {
+        const current = state.method === "WLC" ? state.wlcRank : state.topsisRank;
+        if (!current.length) {
+          notify("Sensitivity needs at least one complete, non-excluded grid cell.", "error");
+          return;
+        }
+        const baseline = current.slice(0, 10);
+        const baselineIds = baseline.map((item) => item.feature.properties.cell_id);
+        const counts = new Map(baselineIds.map((id) => [id, 0]));
+        const scenarios = [];
+        activeCriteria().forEach((criterion) => {
+          [-.2, .2].forEach((change) => {
+            const altered = { ...state.weights, [criterion.key]: state.weights[criterion.key] * (1 + change) };
+            scenarios.push(normalizeWeights(altered));
+          });
+        });
+        for (let index = 0; index < 200; index += 1) {
+          const random = Object.fromEntries(activeCriteria().map((criterion) => [criterion.key, -Math.log(Math.max(Math.random(), 1e-10))]));
+          scenarios.push(normalizeWeights(random));
+        }
+        scenarios.forEach((weights) => {
+          resultFor(state.method, weights).slice(0, 10).forEach((item) => {
+            const id = item.feature.properties.cell_id;
+            if (counts.has(id)) counts.set(id, counts.get(id) + 1);
+          });
+        });
+        const percent = baselineIds.map((id) => scenarios.length ? counts.get(id) / scenarios.length * 100 : 0);
+        if (state.sensitivityChart) {
+          state.sensitivityChart.destroy();
+        }
+        state.sensitivityChart = new Chart($("sensitivity-chart"), {
+          type: "bar",
+          data: {
+            labels: baseline.map((item, index) => `${index + 1}. Cell ${item.feature.properties.cell_id}${percent[index] > 70 ? " ★" : ""}`),
+            datasets: [{ data: percent, backgroundColor: percent.map((value) => value > 70 ? "#ffd166" : "#00bcd4"), borderRadius: 4 }]
+          },
+          options: {
+            indexAxis: "y", responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.x.toFixed(1)}% stable` } } },
+            scales: {
+              x: { min: 0, max: 100, ticks: { color: "#91a4b7", font: { size: 8 } }, grid: { color: "#ffffff12" } },
+              y: { ticks: { color: "#c5d6e5", font: { size: 8 } }, grid: { display: false } }
+            }
+          }
+        });
+        $("sensitivity-note").textContent = `${scenarios.length} scenarios · star marks sites stable in >70% of runs.`;
+      }
+
+      async function loadData() {
+        setStatus("Loading local layers…");
+        const paths = [
+          "metadata.json",
+          "suitability_grid.geojson",
+          "hospitals.geojson",
+          "quetta_city.geojson",
+          "roads_city.geojson"
+        ];
+        const data = await Promise.all(paths.map(async (path) => {
+          const response = await fetch(`data/${path}`);
+          if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
+          return response.json();
+        }));
+        [state.metadata, state.grid, state.hospitalData, state.cityData, state.roadData] = data;
+        console.log(
+          "First five city-road feature properties:",
+          state.roadData.features.slice(0, 5).map((feature) => feature.properties)
+        );
+        state.active = state.metadata.active_criteria || state.metadata.criteria.filter((criterion) => criterion.available).map((criterion) => criterion.key);
+        const nullActiveScoreIds = state.grid.features
+          .filter((feature) => state.active.some((key) => {
+            const score = feature.properties[`raw_${key}`];
+            return score === null || score === undefined || !Number.isFinite(Number(score));
+          }))
+          .map((feature) => feature.properties.cell_id);
+        const excludedCellIds = state.grid.features
+          .filter((feature) => feature.properties.excluded)
+          .map((feature) => feature.properties.cell_id);
+        console.info("City-grid raw criterion audit:", {
+          activeCriteria: state.active,
+          nullActiveScoreCellCount: nullActiveScoreIds.length,
+          nullActiveScoreCellIds: nullActiveScoreIds,
+          excludedCellCount: excludedCellIds.length,
+          excludedCellIds
+        });
+        state.criteria = CRITERIA;
+        prepareNormalizedCriteria();
+        const defaults = state.metadata.default_weights || {};
+        state.weights = normalizeWeights(defaults);
+        state.manual = Object.fromEntries(CRITERIA.map((criterion) => [criterion.key, defaults[criterion.key] ?? 0]));
+        $("cell-count").textContent = `${state.grid.features.length.toLocaleString()} cells`;
+        renderWeightSliders();
+        renderCriterionToggles();
+        renderLegend();
+        renderAHP();
+        state.gridLayer = L.geoJSON(state.grid, {
+          style: () => ({ color: "transparent", weight: 0, fillColor: "#18202c", fillOpacity: state.opacity }),
+          onEachFeature: (feature, layer) => layer.bindPopup(popupHtml(feature, null), { maxWidth: 230 })
+        }).addTo(map);
+        state.hospitals = makeHospitalLayer(state.hospitalData).addTo(map);
+        state.city = L.geoJSON(state.cityData, {
+          style: { color: "#00f0ff", weight: 2, opacity: .9, fillColor: "#00f0ff", fillOpacity: .025 }
+        }).addTo(map);
+        state.boundary = state.city;
+        makeRoadLayers(state.roadData);
+        const cityLayer = state.city;
+        const cityBounds = cityLayer.getBounds();
+        if (!cityBounds.isValid()) {
+          throw new Error("The generated Quetta urban-core boundary has no valid map extent.");
+        }
+        map.setMaxBounds(cityBounds.pad(.1));
+        map.setMinZoom(11);
+        map.setMaxZoom(18);
+        fitCityToVisibleMap();
+        const available = activeCriteria().map((criterion) => criterion.label);
+        const missing = state.metadata.criteria.filter((criterion) => !criterion.available).map((criterion) => criterion.label);
+        setStatus(`${available.length} ${available.length === 1 ? "criterion" : "criteria"} active · ${state.metadata.counts.hospitals} hospitals`, missing.length > 0);
+        if (missing.length) {
+          notify(`Unavailable criteria skipped and remaining weights redistributed: ${missing.join(", ")}. Add local source data and rerun prep.py to enable them.`);
+        }
+        if (!state.metadata.counts.roads) {
+          notify("No real road features were found in C:\\webgis-data. City roads are empty until a local road source is supplied.");
+        }
+        notify("CartoDB dark_nolabels returns API-key-required tiles here; the darkened OSM fallback is selected by default.");
+        recalculate();
+      }
+
+      $("method-switch").addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-method]");
+        if (!button) return;
+        state.method = button.dataset.method;
+        document.querySelectorAll("#method-switch button").forEach((item) => item.classList.toggle("active", item === button));
+        $("method-help").textContent = state.method === "WLC"
+          ? "Weighted linear combination of city-wide min-max criterion scores."
+          : "Min-max criteria weighted to their ideal and anti-ideal distances.";
+        recalculate();
+      });
+      $("weight-mode").addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-mode]");
+        if (!button) return;
+        state.weightMode = button.dataset.mode;
+        setWeightModeButtons();
+        recalculate();
+      });
+      $("equal-weights").addEventListener("click", () => {
+        state.manual = Object.fromEntries(CRITERIA.map((criterion) => [criterion.key, state.active.includes(criterion.key) ? 100 : 0]));
+        renderWeightSliders();
+        state.weightMode = "manual";
+        setWeightModeButtons();
+        recalculate();
+      });
+      $("default-weights").addEventListener("click", () => {
+        state.manual = Object.fromEntries(CRITERIA.map((criterion) => [criterion.key, state.metadata.default_weights?.[criterion.key] ?? 0]));
+        renderWeightSliders();
+        state.weightMode = "manual";
+        setWeightModeButtons();
+        recalculate();
+      });
+      $("apply-ahp").addEventListener("click", () => {
+        state.weightMode = "ahp";
+        state.ahpApplied = true;
+        setWeightModeButtons();
+        recalculate();
+        notify("AHP eigenvector weights applied to available criteria.", "success");
+      });
+      $("grid-toggle").addEventListener("change", () => {
+        if ($("grid-toggle").checked) state.gridLayer.addTo(map);
+        else map.removeLayer(state.gridLayer);
+      });
+      $("opacity-slider").addEventListener("input", () => {
+        state.opacity = Number($("opacity-slider").value) / 100;
+        $("opacity-value").textContent = `${$("opacity-slider").value}%`;
+        updateGridStyle();
+      });
+      $("hospitals-toggle").addEventListener("change", () => {
+        if ($("hospitals-toggle").checked) state.hospitals.addTo(map);
+        else map.removeLayer(state.hospitals);
+      });
+      $("boundary-toggle").addEventListener("change", () => {
+        if ($("boundary-toggle").checked) state.boundary.addTo(map);
+        else map.removeLayer(state.boundary);
+      });
+      $("road-mode").addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-road-mode]");
+        if (button) setRoadMode(button.dataset.roadMode);
+      });
+      document.querySelectorAll(".road-type-toggle").forEach((toggle) => toggle.addEventListener("change", applyRoadVisibility));
+      $("roads-toggle").addEventListener("change", applyRoadVisibility);
+      $("road-names").addEventListener("change", refreshRoadNames);
+      $("road-speed").addEventListener("input", () => {
+        state.roadSpeed = Number($("road-speed").value) / 100;
+        $("road-speed-value").textContent = `${state.roadSpeed.toFixed(1)}×`;
+        setRoadMode(state.roadMode);
+      });
+      $("road-glow").addEventListener("input", () => {
+        state.roadGlow = Number($("road-glow").value);
+        $("road-glow-value").textContent = `${state.roadGlow}px`;
+        state.roadRecords.forEach((record) => roadPaths(record.core, (path) => {
+          path.style.filter = `drop-shadow(0 0 ${state.roadGlow}px var(--road-color))`;
+        }));
+        state.roadRecords.forEach((record) => roadPaths(record.glow, (path) => {
+          path.style.filter = `drop-shadow(0 0 ${state.roadGlow}px var(--road-color))`;
+        }));
+      });
+      $("sensitivity-button").addEventListener("click", sensitivity);
+      $("top10-export").addEventListener("click", exportTopTen);
+      $("ahp-export").addEventListener("click", exportAHP);
+      $("fullscreen-button").addEventListener("click", async () => {
+        if (document.fullscreenElement) await document.exitFullscreen();
+        else await $("map").requestFullscreen();
+        setTimeout(() => map.invalidateSize(), 100);
+      });
+      $("sidebar-toggle").addEventListener("click", () => {
+        const sidebar = $("sidebar");
+        const collapsed = sidebar.classList.toggle("collapsed");
+        document.body.classList.toggle("sidebar-collapsed", collapsed);
+        updateSidebarToggleLabel();
+        setTimeout(fitCityToVisibleMap, 220);
+      });
+      map.on("zoomend", () => {
+        state.roadRecords.forEach((record) => [record.glow, record.core].forEach((group) => {
+          group.setStyle((feature) => roadStyle(feature, group === record.glow ? "glow" : "core"));
+        }));
+        setRoadMode(state.roadMode);
+        refreshRoadNames();
+      });
+      window.addEventListener("resize", () => {
+        state.areaChart?.resize();
+        state.weightsChart?.resize();
+        state.sensitivityChart?.resize();
+        updateSidebarToggleLabel();
+        clearTimeout(state.mapLayoutTimer);
+        state.mapLayoutTimer = setTimeout(fitCityToVisibleMap, 120);
+      });
+      if ("ResizeObserver" in window) {
+        new ResizeObserver(() => {
+          clearTimeout(state.mapLayoutTimer);
+          state.mapLayoutTimer = setTimeout(fitCityToVisibleMap, 120);
+        }).observe($("sidebar"));
+      }
+
+      updateSidebarToggleLabel();
+      loadData().catch((error) => {
+        console.error(error);
+        setStatus("Local data unavailable", true);
+        notify(`Could not load generated files. Run prep.py first, then serve the web folder. ${error.message}`, "error");
+      });
+    })();
+  </script>
+</body>
+</html>

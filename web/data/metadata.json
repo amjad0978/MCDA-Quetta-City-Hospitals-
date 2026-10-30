@@ -1,0 +1,116 @@
+{
+  "district": "Quetta",
+  "crs": "EPSG:4326",
+  "analysis_crs": "EPSG:32642",
+  "cell_size_m": 100,
+  "city_area_km2": 42.281,
+  "city_bounds_wgs84": [
+    66.95168,
+    30.15299,
+    67.04664,
+    30.21704
+  ],
+  "criteria": [
+    {
+      "key": "pop",
+      "label": "Population",
+      "preference": "Higher population",
+      "units": "People per cell",
+      "available": false,
+      "default_weight": 0
+    },
+    {
+      "key": "hosp",
+      "label": "Hospital access",
+      "preference": "Farther from existing hospitals",
+      "units": "Distance (m)",
+      "available": true,
+      "default_weight": 41.6667
+    },
+    {
+      "key": "road",
+      "label": "Road access",
+      "preference": "Closer to roads",
+      "units": "Distance (m)",
+      "available": true,
+      "default_weight": 33.3333
+    },
+    {
+      "key": "major",
+      "label": "Primary / secondary road access",
+      "preference": "Closer to primary or secondary roads",
+      "units": "Distance (m)",
+      "available": true,
+      "default_weight": 25.0
+    },
+    {
+      "key": "slope",
+      "label": "Terrain slope",
+      "preference": "Flatter terrain",
+      "units": "Slope (degrees)",
+      "available": false,
+      "default_weight": 0
+    },
+    {
+      "key": "hazard",
+      "label": "River separation",
+      "preference": "Farther from rivers",
+      "units": "Distance (m)",
+      "available": false,
+      "default_weight": 0
+    }
+  ],
+  "active_criteria": [
+    "hosp",
+    "road",
+    "major"
+  ],
+  "default_weights": {
+    "hosp": 41.666666666666664,
+    "road": 33.333333333333336,
+    "major": 25.0
+  },
+  "sources": {
+    "boundary": "C:\\webgis-data\\from_repo\\pak_admin2.shp",
+    "city_boundary": "dense local hospital cluster, with nearby urban polygons where available",
+    "hospitals": "C:\\webgis-lab\\quetta-dashboard\\data\\hospitals.geojson",
+    "roads": "C:\\webgis-data\\qta_shp\\roads.shp",
+    "rivers": null,
+    "population": null,
+    "dem": null
+  },
+  "counts": {
+    "grid_cells": 4395,
+    "hospitals": 21,
+    "roads": 311,
+    "major_roads": 49,
+    "rivers": 0,
+    "excluded_cells": 19
+  },
+  "road_types": {
+    "motorway": {
+      "count": 0,
+      "length_km": 0.0
+    },
+    "trunk": {
+      "count": 0,
+      "length_km": 0.0
+    },
+    "primary": {
+      "count": 19,
+      "length_km": 50.76
+    },
+    "secondary": {
+      "count": 30,
+      "length_km": 39.15
+    },
+    "tertiary": {
+      "count": 38,
+      "length_km": 38.07
+    },
+    "other": {
+      "count": 224,
+      "length_km": 646.11
+    }
+  }
+}
