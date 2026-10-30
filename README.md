@@ -20,6 +20,12 @@ an internet connection. CARTO is included as a selectable basemap, but it
 returned API-key-required tiles in this environment; the darkened, keyless OSM
 layer is selected by default instead.
 
+## Publish with GitHub Pages
+
+Pushing to `main` automatically publishes the dashboard from `web/` using
+GitHub Actions. After the first deployment completes, open
+<https://amjad0978.github.io/MCDA-Quetta-City-Hospitals-/>.
+
 The district boundary is
 `C:\webgis-data\from_repo\pak_admin2.shp`. The urban-core extent is built from
 the dense cluster of existing hospitals, buffered by 1,500 m and clipped to
